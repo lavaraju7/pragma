@@ -113,7 +113,7 @@ Requires Node 20.11 or newer. No dependencies to install.
 node --test tests/
 ```
 
-112 tests. Scan any codebase directly with the same engine the hook uses:
+115 tests. Scan any codebase directly with the same engine the hook uses:
 
 ```bash
 node scripts/scan.js --tiers safety,design,strict src/
@@ -121,11 +121,3 @@ node scripts/scan.js --tiers safety,design,strict src/
 
 `pragma` is scanned by its own detectors, and the deviations it reports on itself are recorded — with
 reasoning — in [.pragma/debt.md](.pragma/debt.md).
-
-## Prior art
-
-The delivery shape — an always-on rule injected at `SessionStart`, situational nudges at
-`UserPromptSubmit`, plus on-demand skills — follows
-[ponytail](https://github.com/DietrichGebert/ponytail). The goals differ: ponytail optimises for
-*less code*; pragma optimises for *cheap change*, which sometimes means adding an interface, a
-contract or a test. No ponytail content is used.
