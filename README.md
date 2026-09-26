@@ -85,16 +85,16 @@ that look alike but change for different reasons.
 
 ## Install
 
-For development, point Claude Code at the directory:
+For development, clone it and point Claude Code at the directory:
 
 ```bash
-claude --plugin-dir C:/Users/91703/projects/pragma
+claude --plugin-dir ./pragma
 ```
 
 To install it properly, add the repository as a marketplace and install from it:
 
 ```bash
-claude plugin marketplace add <your-org>/pragma
+claude plugin marketplace add lavaraju7/pragma
 claude plugin install pragma@pragma
 ```
 

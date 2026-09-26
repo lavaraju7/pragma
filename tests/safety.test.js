@@ -103,7 +103,9 @@ describe('safety/hardcoded-secret', () => {
   const id = 'safety/hardcoded-secret';
 
   it('flags an API key literal', () => {
-    const source = 'const apiKey = "sk_live_51H8xQ2eZvKYlo2C";';
+    // Deliberately not shaped like any real provider's key: a fixture that matches
+    // a live-credential pattern trips secret scanners on every push.
+    const source = 'const apiKey = "a1b2c3d4e5f6a7b8c9d0";';
     assert.deepEqual(lines(run(id, source)), [1]);
   });
 
