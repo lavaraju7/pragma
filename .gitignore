@@ -1,0 +1,5 @@
+node_modules/
+*.log
+
+# .pragma/debt.md is deliberately tracked — the point of a recorded deviation is
+# that the next person finds it.

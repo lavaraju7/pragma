@@ -1,0 +1,33 @@
+{
+  "name": "pragma",
+  "version": "0.1.0",
+  "description": "Keeps the Pragmatic Programmer's 15 principles in play while Claude writes code: a design ladder injected each session, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts.",
+  "license": "MIT",
+  "keywords": [
+    "code-quality",
+    "design",
+    "refactoring",
+    "pragmatic-programmer",
+    "code-review"
+  ],
+  "userConfig": {
+    "mode": {
+      "type": "string",
+      "title": "Enforcement mode",
+      "description": "One of: off (silent), lite (safety findings only), standard (safety + design), strict (everything, plus a reminder when new code ships without tests). Override per project with /pragma:mode.",
+      "default": "standard"
+    },
+    "maxFindingsPerEdit": {
+      "type": "number",
+      "title": "Max findings reported per edit",
+      "description": "Findings are ranked safety > design > style; the rest are dropped so the feedback stays short.",
+      "default": 5
+    },
+    "disabledDetectors": {
+      "type": "string",
+      "title": "Disabled detectors",
+      "description": "Comma-separated detector ids to silence in this codebase, e.g. naming/vague-name,config/direct-env. Each reported finding prints its id.",
+      "default": ""
+    }
+  }
+}

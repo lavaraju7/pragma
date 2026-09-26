@@ -1,0 +1,16 @@
+{
+  "name": "pragma",
+  "owner": {
+    "name": "pragma"
+  },
+  "plugins": [
+    {
+      "name": "pragma",
+      "source": "./",
+      "description": "Pragmatic Programmer principles, enforced while Claude writes code."
+    }
+  ],
+  "metadata": {
+    "description": "Pragmatic Programmer principles, enforced while Claude writes code."
+  }
+}
