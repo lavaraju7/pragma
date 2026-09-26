@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after, before, describe, it } from 'node:test';
@@ -19,11 +19,18 @@ function runHook(script, payload) {
   });
 }
 
+/**
+ * Deliberately does NOT share stateDir (or any CLAUDE_PLUGIN_* var) with runHook.
+ * That mirrors reality: a skill runs this script via the Bash tool, which never
+ * receives CLAUDE_PLUGIN_DATA — only a hook's own subprocess does. An earlier
+ * version of this test synchronized an env var between the two call sites and
+ * passed while the feature was actually broken end to end; project mode must
+ * work with no shared environment at all.
+ */
 function setMode(cwd, mode) {
   execFileSync(process.execPath, [join(pluginRoot, 'scripts', 'mode.js'), mode], {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, PRAGMA_STATE_DIR: stateDir },
   });
 }
 
@@ -59,6 +66,28 @@ describe('session-start.js', () => {
   it('emits nothing when the project is set to off', () => {
     setMode(workspace, 'off');
     assert.equal(runHook('session-start.js', { hook_event_name: 'SessionStart', source: 'startup', cwd: workspace }), '');
+  });
+});
+
+describe('project mode — CLI and hook must agree with no shared environment', () => {
+  it('a mode set via the CLI (as a skill would invoke it) is honoured by the hook', () => {
+    setMode(workspace, 'off');
+    const output = runHook('post-edit.js', {
+      session_id: 'mode-agreement',
+      hook_event_name: 'PostToolUse',
+      cwd: workspace,
+      tool_name: 'Write',
+      tool_input: { file_path: join(workspace, 'src', 'services', 'order.ts') },
+    });
+    assert.equal(output, '', 'hook must see the mode the CLI just set, not some other default');
+    setMode(workspace, 'standard');
+  });
+
+  it('persists as a file inside the project, not a global store keyed by path', () => {
+    setMode(workspace, 'strict');
+    const stored = readFileSync(join(workspace, '.pragma', 'mode'), 'utf8').trim();
+    assert.equal(stored, 'strict');
+    setMode(workspace, 'standard');
   });
 });
 

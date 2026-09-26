@@ -1,4 +1,4 @@
-import { JS, codeLines, finding, withDepth } from '../source.js';
+import { JS, codeLines, finding, isTestFile, withDepth } from '../source.js';
 
 const P9 = { principle: 'P9', title: 'Shared State', tier: 'safety' };
 
@@ -13,7 +13,13 @@ const moduleMutable = {
   id: 'state/module-mutable',
   ...P9,
   extensions: JS,
-  run(source) {
+  run(source, filePath) {
+    // A test's before()/after() lifecycle reassigning a module-level fixture once
+    // is the standard node:test pattern, not the concurrent-mutation risk this
+    // rule exists for: exactly one writer, at one well-defined point, and the
+    // file's tests run sequentially.
+    if (isTestFile(filePath)) return [];
+
     const lines = withDepth(source);
     const declarations = lines
       .filter((line) => line.depthBefore === 0)

@@ -30,6 +30,16 @@ describe('state/module-mutable', () => {
     const source = 'function total(xs) {\n  let sum = 0;\n  for (const x of xs) sum += x;\n  return sum;\n}';
     assert.deepEqual(run(id, source), []);
   });
+
+  it('stays quiet on the standard node:test before()/after() fixture pattern', () => {
+    const source = [
+      'let workspace;',
+      '',
+      "before(() => { workspace = mkdtempSync('x'); });",
+      "after(() => { rmSync(workspace); });",
+    ].join('\n');
+    assert.deepEqual(run(id, source, 'tests/hooks.test.js'), []);
+  });
 });
 
 describe('state/global-write', () => {

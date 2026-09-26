@@ -1,6 +1,6 @@
 {
   "name": "pragma",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Keeps the Pragmatic Programmer's 15 principles in play while Claude writes code: a design ladder injected each session, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts.",
   "author": {
     "name": "koruprolu lava raju",

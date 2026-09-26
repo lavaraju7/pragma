@@ -58,6 +58,13 @@ If one specific rule is noisy in your codebase, silence that rule rather than dr
 set `disabledDetectors` in the plugin's settings to a comma-separated list of detector ids (each
 finding prints its id).
 
+The mode is stored as a single line in `.pragma/mode`, inside the project — not in a global,
+per-installation store. That is deliberate: `/pragma:mode` runs as a plain script via the Bash tool,
+which never receives the `CLAUDE_PLUGIN_*` environment variables the harness injects only into a
+hook's own subprocess. A global store keyed by path would let the CLI and the hooks silently read
+and write two different files. A file inside the project is the one location every invocation path
+agrees on — and as a side effect, a team can commit it to hold everyone to the same intensity.
+
 ## The principles
 
 `principles/core.md` is the ~35-line ladder injected each session. The fifteen detailed references

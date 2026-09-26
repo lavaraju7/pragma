@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { MODES, normalizeMode, resolveConfig, tiersForMode } from '../hooks/lib/config.js';
-import { writeProjectMode } from '../hooks/lib/state.js';
+import { writeProjectMode } from '../hooks/lib/project-mode.js';
 
 const DESCRIPTIONS = {
   off: 'silent — no ladder, no edit feedback',

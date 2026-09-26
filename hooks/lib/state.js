@@ -3,11 +3,16 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 const SESSION_RETENTION_MS = 24 * 60 * 60 * 1000;
-const WINDOWS_SEPARATOR = /\\/g;
 
 /**
- * Where mode and per-session bookkeeping live. CLAUDE_PLUGIN_DATA survives plugin
- * updates; the home-directory fallback covers development installs and tests.
+ * Ephemeral, per-session bookkeeping only (currently: has this session written
+ * source or a test, for the strict-mode Stop reminder). Unlike the enforcement
+ * mode ([[project-mode.js]]), this has no reason to be visible per-project or
+ * shared between machines, and it is read and written only from inside real hook
+ * subprocesses — post-edit.js and stop-check.js — which both reliably receive
+ * CLAUDE_PLUGIN_DATA from the harness. A skill-invoked script never touches this
+ * file, so the environment-variable mismatch that broke project-mode storage
+ * does not apply here.
  */
 export function stateFilePath() {
   const base = process.env.PRAGMA_STATE_DIR
@@ -19,12 +24,9 @@ export function stateFilePath() {
 export function readState() {
   try {
     const parsed = JSON.parse(readFileSync(stateFilePath(), 'utf8'));
-    return {
-      projects: parsed.projects ?? {},
-      sessions: parsed.sessions ?? {},
-    };
+    return { sessions: parsed.sessions ?? {} };
   } catch {
-    return { projects: {}, sessions: {} };
+    return { sessions: {} };
   }
 }
 
@@ -39,26 +41,7 @@ function pruneSessions(state) {
   const sessions = Object.fromEntries(
     Object.entries(state.sessions ?? {}).filter(([, entry]) => (entry.updatedAt ?? 0) >= cutoff),
   );
-  return { projects: state.projects ?? {}, sessions };
-}
-
-/** Projects are keyed by working directory, so mode is set per codebase. */
-export function projectKey(cwd) {
-  return (cwd || process.cwd())
-    .replace(WINDOWS_SEPARATOR, '/')
-    .replace(/\/+$/, '')
-    .toLowerCase();
-}
-
-export function readProjectMode(cwd) {
-  return readState().projects[projectKey(cwd)]?.mode;
-}
-
-export function writeProjectMode(cwd, mode) {
-  const state = readState();
-  const key = projectKey(cwd);
-  state.projects[key] = { ...state.projects[key], mode, updatedAt: Date.now() };
-  writeState(state);
+  return { sessions };
 }
 
 export function readSession(sessionId) {
