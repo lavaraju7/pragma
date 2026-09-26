@@ -1,0 +1,8 @@
+# Store and check out every text file with LF, whatever the contributor's
+# core.autocrlf happens to be. `text=auto` still detects binaries correctly, so
+# there is nothing to list here per file type.
+#
+# This matters beyond tidiness: a hook script that reaches Linux or macOS with
+# CRLF line endings fails on its shebang line, and the failure reads as a
+# missing interpreter rather than a line-ending problem.
+* text=auto eol=lf
