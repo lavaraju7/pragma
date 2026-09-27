@@ -1,4 +1,4 @@
-import { JS, blocksOf, finding, isTestFile, withDepth } from '../source.js';
+import { JS, blocksOf, dedupeByLine, finding, isTestFile, withDepth } from '../source.js';
 
 const P1 = { principle: 'P1', title: 'Good Design', tier: 'strict' };
 const P10 = { principle: 'P10', title: 'Algorithm Speed', tier: 'strict' };
@@ -92,15 +92,16 @@ const lookupInLoop = {
   run(source, filePath) {
     if (isTestFile(filePath)) return [];
 
-    return blocksOf(source, LOOP_HEADER)
-      .flatMap((block) => block.body.filter((line) => LINEAR_SCAN.test(line.code)).slice(0, 1))
-      .map((line) => finding({
-        detector: lookupInLoop.id,
-        ...P10,
-        line: line.number,
-        message: 'Linear scan inside a loop — quadratic in the input',
-        fix: 'Index the collection into a Map once before the loop, then look up in constant time.',
-      }));
+    const perBlockLines = blocksOf(source, LOOP_HEADER)
+      .flatMap((block) => block.body.filter((line) => LINEAR_SCAN.test(line.code)).slice(0, 1));
+
+    return dedupeByLine(perBlockLines).map((line) => finding({
+      detector: lookupInLoop.id,
+      ...P10,
+      line: line.number,
+      message: 'Linear scan inside a loop — quadratic in the input',
+      fix: 'Index the collection into a Map once before the loop, then look up in constant time.',
+    }));
   },
 };
 

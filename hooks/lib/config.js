@@ -19,6 +19,12 @@ const DEFAULT_MAX_FINDINGS = 5;
 /**
  * Per-project mode wins over the install-time userConfig default, so /pragma:mode
  * can quiet the plugin in one codebase without changing it everywhere.
+ *
+ * maxFindings and disabledDetectors have two possible sources: Claude Code's own
+ * userConfig, injected as CLAUDE_PLUGIN_OPTION_*, and the plain PRAGMA_* names —
+ * which any host can set, including a Cursor hooks.json command's own shell
+ * environment, or a project's .env. Claude Code's variant wins when both are set,
+ * matching how its userConfig is meant to be authoritative for that host.
  */
 export function resolveConfig(cwd) {
   const mode = readProjectMode(cwd)
@@ -29,8 +35,12 @@ export function resolveConfig(cwd) {
     mode,
     tiers: TIERS_BY_MODE[mode],
     enabled: mode !== 'off',
-    maxFindings: positiveInt(process.env.CLAUDE_PLUGIN_OPTION_MAXFINDINGSPEREDIT) ?? DEFAULT_MAX_FINDINGS,
-    disabledDetectors: splitList(process.env.CLAUDE_PLUGIN_OPTION_DISABLEDDETECTORS),
+    maxFindings: positiveInt(process.env.CLAUDE_PLUGIN_OPTION_MAXFINDINGSPEREDIT)
+      ?? positiveInt(process.env.PRAGMA_MAX_FINDINGS)
+      ?? DEFAULT_MAX_FINDINGS,
+    disabledDetectors: splitList(
+      process.env.CLAUDE_PLUGIN_OPTION_DISABLEDDETECTORS ?? process.env.PRAGMA_DISABLED_DETECTORS,
+    ),
   };
 }
 

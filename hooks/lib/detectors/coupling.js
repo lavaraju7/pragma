@@ -1,4 +1,4 @@
-import { JS, blocksOf, codeLines, finding, isBusinessLogicFile, isTestFile } from '../source.js';
+import { JS, blocksOf, codeLines, dedupeByLine, finding, isBusinessLogicFile, isTestFile } from '../source.js';
 
 const P8 = { principle: 'P8', title: 'Temporal Coupling', tier: 'design' };
 const P5 = { principle: 'P5', title: 'Decoupling', tier: 'design' };
@@ -13,15 +13,16 @@ const awaitInLoop = {
   ...P8,
   extensions: JS,
   run(source) {
-    return blocksOf(source, LOOP_HEADER)
-      .flatMap((block) => block.body.filter((line) => AWAIT.test(line.code)).slice(0, 1))
-      .map((line) => finding({
-        detector: awaitInLoop.id,
-        ...P8,
-        line: line.number,
-        message: 'Awaiting inside a loop, one iteration at a time',
-        fix: 'If the iterations are independent, collect the promises and await Promise.all.',
-      }));
+    const perBlockLines = blocksOf(source, LOOP_HEADER)
+      .flatMap((block) => block.body.filter((line) => AWAIT.test(line.code)).slice(0, 1));
+
+    return dedupeByLine(perBlockLines).map((line) => finding({
+      detector: awaitInLoop.id,
+      ...P8,
+      line: line.number,
+      message: 'Awaiting inside a loop, one iteration at a time',
+      fix: 'If the iterations are independent, collect the promises and await Promise.all.',
+    }));
   },
 };
 

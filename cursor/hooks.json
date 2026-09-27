@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "command": "node \"{{PRAGMA_ROOT}}/cursor/session-start.js\"", "timeout": 5 }
+    ],
+    "afterFileEdit": [
+      { "command": "node \"{{PRAGMA_ROOT}}/cursor/after-file-edit.js\"", "timeout": 5 }
+    ],
+    "postToolUse": [
+      { "command": "node \"{{PRAGMA_ROOT}}/cursor/post-tool-use.js\"", "timeout": 10 }
+    ],
+    "stop": [
+      { "command": "node \"{{PRAGMA_ROOT}}/cursor/stop.js\"", "timeout": 5 }
+    ]
+  }
+}

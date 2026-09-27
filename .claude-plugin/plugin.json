@@ -1,7 +1,7 @@
 {
   "name": "pragma",
-  "version": "0.1.1",
-  "description": "Keeps the Pragmatic Programmer's 15 principles in play while Claude writes code: a design ladder injected each session, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts.",
+  "version": "0.2.0",
+  "description": "Keeps the Pragmatic Programmer's 15 principles in play while Claude writes code: a design ladder injected each session, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts. A Cursor installer (scripts/install-cursor.js) shares the same detector engine.",
   "author": {
     "name": "koruprolu lava raju",
     "email": "lavaraju1170183@gmail.com"

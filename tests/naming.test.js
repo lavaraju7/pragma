@@ -53,6 +53,11 @@ describe('naming/boolean-name', () => {
   it('stays quiet on names that already read as assertions', () => {
     assert.deepEqual(run(id, 'const loading = true;'), []);
   });
+
+  it('stays quiet on a ternary whose condition merely contains a comparison', () => {
+    const source = "const label = typeof value === 'string' ? value : JSON.stringify(value);";
+    assert.deepEqual(run(id, source), []);
+  });
 });
 
 describe('naming/singular-collection', () => {
@@ -69,6 +74,26 @@ describe('naming/singular-collection', () => {
   it('stays quiet on a collective noun', () => {
     assert.deepEqual(run(id, 'const userList = [];'), []);
   });
+
+  it('stays quiet on a multi-line array literal that joins to a string', () => {
+    const source = [
+      'const content = [',
+      "  'line one',",
+      "  'line two',",
+      "].join('\\n');",
+    ].join('\n');
+    assert.deepEqual(run(id, source), []);
+  });
+
+  it('still flags a multi-line array with no closing reduction', () => {
+    const source = [
+      'const user = [',
+      '  rows[0],',
+      '  rows[1],',
+      '];',
+    ].join('\n');
+    assert.deepEqual(lines(run(id, source)), [1]);
+  });
 });
 
 describe('naming/unitless-constant', () => {
@@ -81,6 +106,7 @@ describe('naming/unitless-constant', () => {
   it('stays quiet when the name carries the unit', () => {
     assert.deepEqual(run(id, 'const timeoutMs = 30000;'), []);
     assert.deepEqual(run(id, 'const secondsPerDay = 86400;'), []);
+    assert.deepEqual(run(id, 'const arrayCloseLookaheadLines = 200;'), []);
   });
 
   it('stays quiet on small numbers that need no unit', () => {

@@ -168,3 +168,19 @@ export function blocksOf(source, startPattern) {
 export function finding({ detector, principle, title, tier, line, message, fix }) {
   return { detector, principle, title, tier, line, message, fix };
 }
+
+/**
+ * `blocksOf` returns one block per matched header, and a line inside a nested
+ * loop belongs to every enclosing loop's block — genuinely, not by mistake. A
+ * detector that reports one finding per block it matched then reports that same
+ * line once per level of nesting. Use this on the mapped findings to collapse
+ * those back to one per line, keeping the first (outermost) occurrence.
+ */
+export function dedupeByLine(findings) {
+  const seen = new Set();
+  return findings.filter((f) => {
+    if (seen.has(f.line)) return false;
+    seen.add(f.line);
+    return true;
+  });
+}

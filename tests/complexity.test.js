@@ -88,4 +88,15 @@ describe('complexity/lookup-in-loop', () => {
     ].join('\n');
     assert.deepEqual(run(id, source), []);
   });
+
+  it('reports a scan inside nested loops once, not once per enclosing loop', () => {
+    const source = [
+      'for (const group of groups) {',
+      '  for (const order of group.orders) {',
+      '    const user = users.find((u) => u.id === order.userId);',
+      '  }',
+      '}',
+    ].join('\n');
+    assert.deepEqual(lines(run(id, source)), [3]);
+  });
 });

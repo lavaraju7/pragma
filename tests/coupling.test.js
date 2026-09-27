@@ -19,6 +19,17 @@ describe('coupling/await-in-loop', () => {
     assert.deepEqual(run(id, source), []);
   });
 
+  it('reports an await inside nested loops once, not once per enclosing loop', () => {
+    const source = [
+      'for (const group of groups) {',
+      '  for (const order of group.orders) {',
+      '    await notify(order);',
+      '  }',
+      '}',
+    ].join('\n');
+    assert.deepEqual(lines(run(id, source)), [3]);
+  });
+
   it('stays quiet on a loop with no await', () => {
     const source = 'for (const order of orders) {\n  total += order.amount;\n}';
     assert.deepEqual(run(id, source), []);
