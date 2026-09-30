@@ -1,0 +1,31 @@
+{
+  "pragma": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|edit_file|str_replace.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"{{PRAGMA_ROOT}}/antigravity/post-tool-use.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node \"{{PRAGMA_ROOT}}/antigravity/pre-invocation.js\"",
+        "timeout": 5
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node \"{{PRAGMA_ROOT}}/antigravity/stop.js\"",
+        "timeout": 5
+      }
+    ]
+  }
+}

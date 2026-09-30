@@ -15,6 +15,10 @@ const target = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : proce
 const root = pluginRoot();
 const cursorDir = join(target, CURSOR_DIR_NAME);
 const templateDir = join(root, 'cursor');
+// Command bodies are host-agnostic prose, shared with the Antigravity
+// installer — kept out of cursor/ so that directory only names what's genuinely
+// Cursor-specific.
+const commandsSourceDir = join(root, 'templates', 'commands');
 
 const report = [];
 
@@ -69,12 +73,11 @@ function installHooks() {
 }
 
 function installCommands() {
-  const sourceDir = join(templateDir, 'commands');
   const targetDir = join(cursorDir, 'commands');
   mkdirSync(targetDir, { recursive: true });
 
-  const commandNames = readdirSync(sourceDir).map((name) => {
-    const content = substitutePaths(readFileSync(join(sourceDir, name), 'utf8'));
+  const commandNames = readdirSync(commandsSourceDir).map((name) => {
+    const content = substitutePaths(readFileSync(join(commandsSourceDir, name), 'utf8'));
     writeFileSync(join(targetDir, name), content, 'utf8');
     return `/${basename(name, '.md')}`;
   });

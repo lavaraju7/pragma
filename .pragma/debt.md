@@ -5,19 +5,24 @@ Deliberate departures from the principles, with the reasoning. Recorded via `/pr
 ## Environment read outside the config module
 
 - **Principle:** P6 Configuration
-- **Where:** `hooks/lib/state.js:13-14`, `hooks/lib/paths.js:9`, `cursor/lib/context.js:13,27`
+- **Where:** `hooks/lib/state.js:13-14`, `hooks/lib/paths.js:9`, `cursor/lib/context.js:13,27`,
+  `antigravity/lib/context.js:21`
 - **What:** These read `PRAGMA_STATE_DIR`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_PLUGIN_ROOT` and
   `CURSOR_PROJECT_DIR` directly rather than going through `hooks/lib/config.js`.
 - **Why deliberate:** `config.js` imports `state.js` (via `project-mode.js`) to resolve the
   per-project mode; routing these reads through config would make that circular. And these values
   are locations supplied by whichever host is running the hook, not tunables `config.js` owns —
-  `cursor/lib/context.js` exists specifically to bridge that difference between hosts, the same job
-  `hooks/lib/paths.js` and `hooks/lib/state.js` already do for Claude Code. None can be validated at
-  startup, either: a hook process has no startup phase distinct from its work.
-- **Cost if wrong:** low. A handful of reads, each with an explicit fallback, in three small files
+  `cursor/lib/context.js` and `antigravity/lib/context.js` exist specifically to bridge that
+  difference between hosts, the same job `hooks/lib/paths.js` and `hooks/lib/state.js` already do for
+  Claude Code. None can be validated at startup, either: a hook process has no startup phase distinct
+  from its work.
+- **Cost if wrong:** low. A handful of reads, each with an explicit fallback, in four small files
   whose entire purpose is exactly this kind of host-specific bridging.
-- **Revisit:** if a third host is added and the bridging logic starts actually duplicating (not just
-  resembling) itself across files, factor the shared parts into one module the per-host files import.
+- **Revisit:** now that a third host exists, check whether the bridging logic is actually
+  duplicating (not just resembling) itself across `cursor/lib/context.js` and
+  `antigravity/lib/context.js` — so far each function differs in what it reads (`workspacePaths`
+  array vs `cwd`, `conversationId` vs `conversation_id`), which is still the P2 case of looking alike
+  without being the same knowledge, not yet a shared module waiting to be extracted.
 - **Recorded:** 2026-09-26
 
 ## Tier name literals repeated in the mode tables
@@ -51,7 +56,7 @@ Deliberate departures from the principles, with the reasoning. Recorded via `/pr
 ## Linear scan inside a loop, on a tiny array
 
 - **Principle:** P10 Algorithm Speed
-- **Where:** `scripts/install-cursor.js:57`
+- **Where:** `scripts/install-cursor.js:65`
 - **What:** `existing.hooks[event].some((e) => e.command === entry.command)` runs inside a loop over
   the hook entries being merged in.
 - **Why deliberate:** `existing.hooks[event]` is a handful of hook command strings — realistically

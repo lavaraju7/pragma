@@ -2,7 +2,7 @@
 
 Keeps the Pragmatic Programmer's principles in play while an AI coding agent writes code — not as a
 lecture at the start of a session, but at the moments they actually apply. Ships as an installable
-Claude Code plugin, and as a small per-project installer for Cursor.
+Claude Code plugin, and as a small per-project installer for Cursor and Antigravity.
 
 The question it optimises for is not "does this work?" but **"what will it cost to change this?"**
 
@@ -29,8 +29,8 @@ pragma — 3 findings in src/services/order.ts
 It never blocks a tool call. The detectors are regex-grade, and a false positive that halts your
 work is worse than one you can ignore.
 
-**On demand** — eight skills for the work detectors cannot do (the same eight, as Cursor commands,
-if that's the editor — see [Also works in Cursor](#also-works-in-cursor)).
+**On demand** — eight skills for the work detectors cannot do (the same eight, as Cursor commands or
+Antigravity workflows, if that's the editor — see below).
 
 ## Commands
 
@@ -129,8 +129,44 @@ Committing the resulting `.cursor/` directory is the point: it travels with the 
   one-time "this needs a test" reminder works on both.
 
 **Because `.pragma/mode` is a plain file inside the project**, not a Claude-Code-specific store, a
-project using both hosts shares its enforcement mode between them automatically — set it from either
-one and both read the same file.
+project using more than one of these hosts shares its enforcement mode between them automatically —
+set it from any one and the rest read the same file.
+
+## Also works in Antigravity
+
+Same shape as Cursor — no marketplace, so a generator writes into the project instead of an install
+command:
+
+```bash
+node /path/to/pragma/scripts/install-antigravity.js [target-directory]
+```
+
+Writes `.agents/rules/pragma.md` (the ladder, plain markdown — Antigravity's rule format isn't
+documented well enough yet to justify guessing at frontmatter fields the way Cursor's `.mdc` uses),
+`.agents/workflows/pragma-*.md` (the same eight commands, from the same shared source Cursor's
+installer reads), and merges a `"pragma"` entry into `.agents/hooks.json` — namespaced by hook name
+in Antigravity's own schema, so merging means only ever touching that one entry and leaving any other
+tool's entry in the file untouched, the same safety property the Cursor installer has for its
+per-event arrays.
+
+**Read this part before relying on the hooks.** Antigravity's hook system is new enough that:
+
+- Its schema was pieced together from Google's own docs plus independent hands-on testing, because
+  the two didn't fully agree with each other at the time this was written — the safer parts (rules,
+  workflows) needed none of that, the hooks did.
+- There is an open, unresolved report of `Stop` and `PostToolUse` hooks simply not firing at all on
+  Antigravity IDE for Windows — [the exact platform this was built on](https://discuss.ai.google.dev/t/stop-and-posttooluse-hooks-in-agents-hooks-json-never-fire-antigravity-ide-1-107-0-windows/178288).
+  This was verified the same way the Cursor and Claude Code adapters were — direct invocation with a
+  payload matching the documented schema — **not** inside a live Antigravity session, because none
+  was available to test against. If the hooks don't fire for you, that failure mode is already known
+  about; the rule and workflows do not depend on hooks working and are unaffected either way.
+- `PostToolUse`'s own response is documented as always ignored — there is no field in it to inject
+  anything through, unlike Claude Code and Cursor. Only `PreInvocation` can inject context
+  (`ephemeralMessage`), but it fires once per model turn, with no file path of its own. So the
+  per-edit feedback here is a **relay**: `PostToolUse` records findings for the conversation,
+  `stop.js` handles the test reminder, and the *next* `PreInvocation` call delivers whatever
+  `PostToolUse` left, once. Two hooks standing in for the one hook this takes everywhere else — worth
+  knowing if a finding shows up on the following turn rather than immediately.
 
 ## Does this actually help?
 
@@ -184,14 +220,14 @@ export async function chargeUser(userId: string) {
 of a linter is staying silent on the legitimate case that merely *looks* like the violation. Every
 one of the 26 detectors is tested against both — a parameterised query next to the interpolated one
 it should stay quiet on, a URL that's hardcoded but legitimately lives in the config module, a
-ternary that contains a comparison without being one. 136 tests, [tests/](tests/), runnable with
+ternary that contains a comparison without being one. 152 tests, [tests/](tests/), runnable with
 `node --test`.
 
 **Dogfooding, not just claims.** `pragma` is scanned by its own detectors — `node scripts/scan.js
-hooks scripts cursor` — against its own ~1,800 lines. Currently: 9 findings, every one recorded with
-its specific reasoning in [.pragma/debt.md](.pragma/debt.md), rather than silently ignored or
-suppressed. That file is the actual, current output of the tool pointed at itself, not a curated
-example.
+hooks scripts cursor antigravity` — against its own ~2,100 lines. Currently: 10 findings, every one
+recorded with its specific reasoning in [.pragma/debt.md](.pragma/debt.md), rather than silently
+ignored or suppressed. That file is the actual, current output of the tool pointed at itself, not a
+curated example.
 
 **A real bug this process found.** Building the mode-switching feature, testing it live (writing real
 violations through the actual tool, in a real installed session) surfaced a genuine cross-environment
@@ -224,8 +260,8 @@ Requires Node 20.11 or newer. No dependencies to install.
 node --test tests/
 ```
 
-136 tests, including the Cursor adapters and the installer's merge logic. Scan any codebase directly
-with the same engine the hook uses:
+152 tests, including the Cursor and Antigravity adapters and both installers' merge logic. Scan any
+codebase directly with the same engine the hook uses:
 
 ```bash
 node scripts/scan.js --tiers safety,design,strict src/
