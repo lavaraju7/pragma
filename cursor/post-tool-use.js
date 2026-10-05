@@ -4,6 +4,7 @@ import { analyze } from '../hooks/lib/detectors/index.js';
 import { emitJson, readHookInput, runHook } from '../hooks/lib/hook-io.js';
 import { formatFindings } from '../hooks/lib/report.js';
 import { hasExtension, JS_AND_PY } from '../hooks/lib/source.js';
+import { pathFromArgs } from '../hooks/lib/tool-paths.js';
 import { projectRootOf } from './lib/context.js';
 
 /**
@@ -13,12 +14,12 @@ import { projectRootOf } from './lib/context.js';
  * name; a tool call that doesn't match any of them just falls through to the
  * empty-return below (safe no-op), so a wrong guess here costs silence, not a
  * crash — the same trade-off ../hooks/post-edit.js makes on the Claude Code side.
+ * (The plausible key names live in hooks/lib/tool-paths.js, shared by every host.)
  */
-const PATH_KEYS = ['file_path', 'path', 'filePath', 'target_file', 'targetFile'];
 
 runHook(async () => {
   const input = await readHookInput();
-  const filePath = PATH_KEYS.map((key) => input.tool_input?.[key]).find(Boolean);
+  const filePath = pathFromArgs(input.tool_input);
   if (!filePath || !hasExtension(filePath, JS_AND_PY)) return;
 
   const config = resolveConfig(projectRootOf(input));

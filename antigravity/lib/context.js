@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { pathFromArgs } from '../../hooks/lib/tool-paths.js';
 
 /**
  * Antigravity's common hook payload carries `workspacePaths` (an array), not a
@@ -35,9 +36,6 @@ export function sessionKeyOf(input) {
  * trade-off as the Cursor adapter — try every plausible key and no-op safely
  * on a miss rather than assume one exact name.
  */
-const PATH_KEYS = ['file_path', 'path', 'filePath', 'target_file', 'targetFile', 'AbsolutePath'];
-
 export function filePathOf(input) {
-  const args = input.toolCall?.args ?? {};
-  return PATH_KEYS.map((key) => args[key]).find(Boolean);
+  return pathFromArgs(input.toolCall?.args);
 }

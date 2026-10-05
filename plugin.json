@@ -1,0 +1,16 @@
+{
+  "name": "pragma",
+  "version": "0.4.0",
+  "description": "Keeps the Pragmatic Programmer's 15 principles in play while an agent writes code: a design ladder at session start, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts.",
+  "author": {
+    "name": "koruprolu lava raju",
+    "email": "lavaraju1170183@gmail.com"
+  },
+  "homepage": "https://github.com/lavaraju7/pragma",
+  "repository": "https://github.com/lavaraju7/pragma",
+  "license": "MIT",
+  "keywords": ["code-quality", "design", "refactoring", "pragmatic-programmer", "code-review"],
+  "skills": "copilot/skills",
+  "agents": "copilot/agents",
+  "hooks": "copilot/hooks.json"
+}

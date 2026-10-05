@@ -2,7 +2,8 @@
 
 Keeps the Pragmatic Programmer's principles in play while an AI coding agent writes code — not as a
 lecture at the start of a session, but at the moments they actually apply. Ships as an installable
-Claude Code plugin, and as a small per-project installer for Cursor and Antigravity.
+Claude Code plugin and a GitHub Copilot CLI plugin, and as a small per-project installer for Cursor
+and Antigravity.
 
 The question it optimises for is not "does this work?" but **"what will it cost to change this?"**
 
@@ -29,8 +30,8 @@ pragma — 3 findings in src/services/order.ts
 It never blocks a tool call. The detectors are regex-grade, and a false positive that halts your
 work is worse than one you can ignore.
 
-**On demand** — eight skills for the work detectors cannot do (the same eight, as Cursor commands or
-Antigravity workflows, if that's the editor — see below).
+**On demand** — eight skills for the work detectors cannot do (the same eight, as Cursor commands,
+Antigravity workflows or Copilot skills, if that's the editor — see below).
 
 ## Commands
 
@@ -168,6 +169,72 @@ per-event arrays.
   `PostToolUse` left, once. Two hooks standing in for the one hook this takes everywhere else — worth
   knowing if a finding shows up on the following turn rather than immediately.
 
+## Also works in GitHub Copilot
+
+Unlike Cursor and Antigravity, Copilot CLI has a real plugin system, so this one installs the way the
+Claude Code plugin does — no per-project generator:
+
+```bash
+copilot plugin marketplace add lavaraju7/pragma
+copilot plugin install pragma@pragma
+```
+
+Copilot reads the same `.claude-plugin/marketplace.json` Claude Code does. (`copilot plugin install
+lavaraju7/pragma` also works today, but the CLI itself warns that direct installs are deprecated in
+favour of `plugin@marketplace`.)
+
+Copilot reads a plugin manifest at the repository root ahead of `.claude-plugin/plugin.json`, and
+Claude Code reads only the latter. That's what lets one repository be both without either host seeing
+the other's files: the root [`plugin.json`](plugin.json) points Copilot at `copilot/`, and nothing
+Claude Code loads changed.
+
+| Piece | What it is |
+|---|---|
+| `copilot/hooks.json` | `SessionStart` (the ladder), `PostToolUse` (findings on every edit), `Stop` (strict mode's test reminder) — wired to the same detector engine as every other host |
+| `copilot/skills/pragma-*/` | The same eight skills, **generated** from the sources the other hosts use (`scripts/generate-copilot.js`) — and a test fails if they ever drift from them |
+| `copilot/agents/` | The `pragmatic-reviewer` agent `pragma-audit` fans out to, in Copilot's own agent format |
+
+Per-edit feedback goes straight back to the agent (`PostToolUse` takes an `additionalContext`), so
+unlike Antigravity there is no relay. Two Copilot specifics are handled: its editing tools pass a
+*relative* path, and `apply_patch` passes no path at all — the files are named inside the patch — so
+the shared extractor ([`hooks/lib/tool-paths.js`](hooks/lib/tool-paths.js)) resolves both.
+
+**What was checked against a real Copilot CLI** (1.0.91, sandboxed with `COPILOT_HOME`, offline
+commands only):
+
+- The root manifest wins. Given deliberately different versions in `plugin.json` and
+  `.claude-plugin/plugin.json`, Copilot loaded the root one.
+- `copilot/skills` is what loads — not the Claude Code `skills/` directory — and `copilot skill list`
+  parses all eight `pragma-*` skills with their names and descriptions.
+- The marketplace flow works: `marketplace add` accepts the existing `.claude-plugin/marketplace.json`
+  and `pragma@pragma` installs and loads.
+
+**What wasn't.** Hooks and the agent only come alive in a session, and driving one needs a login and
+model calls, which a no-credentials check can't do. The CLI doesn't validate the hooks file at install
+(a file that isn't valid JSON installs without complaint), so "installs cleanly" says nothing about
+whether they fire. They were built against GitHub's published hook reference and tested by running
+the adapters directly. Specifically:
+
+- Which environment variable carries the plugin root to a hook — or whether the host expands
+  `${CLAUDE_PLUGIN_ROOT}` in the command text instead — isn't settled by Copilot's own docs (a
+  third-party issue asking exactly that is open). The hook commands handle every variant, and
+  [tests/copilot-plugin.test.js](tests/copilot-plugin.test.js) executes each one, in Bash and
+  PowerShell, to prove it; if the host does neither, the hooks fail open (Copilot logs the failure
+  and carries on) and the skills, which find the plugin root from their own location instead, are
+  unaffected.
+- Skills carry no `${CLAUDE_PLUGIN_ROOT}` — Claude Code substitutes it; nothing in Copilot's docs says
+  Copilot does — so each one tells the agent where the plugin root is, in prose.
+- VS Code loads the same plugin format, but its hook entries and output use a different shape
+  (`command`/`windows`/`timeout`, nested `hookSpecificOutput`) from the Copilot CLI one targeted here.
+  Skills and the agent should work there; hook feedback may not.
+- Copilot's cloud coding agent reads only `.github/hooks/*.json` from the repository, never an
+  installed plugin, so none of this reaches it.
+- No equivalent of Claude Code's per-prompt nudges: Copilot's `userPromptSubmitted` hook can't inject
+  context, only block — the same reason there are none on Cursor.
+
+`.pragma/mode` is still the one file all of these share, so a project that uses Copilot alongside any
+other host gets one enforcement mode across all of them.
+
 ## Does this actually help?
 
 Not a benchmark — this doesn't run a suite of tasks across models to produce a percentage, and a
@@ -220,11 +287,11 @@ export async function chargeUser(userId: string) {
 of a linter is staying silent on the legitimate case that merely *looks* like the violation. Every
 one of the 26 detectors is tested against both — a parameterised query next to the interpolated one
 it should stay quiet on, a URL that's hardcoded but legitimately lives in the config module, a
-ternary that contains a comparison without being one. 152 tests, [tests/](tests/), runnable with
+ternary that contains a comparison without being one. 193 tests, [tests/](tests/), runnable with
 `node --test`.
 
 **Dogfooding, not just claims.** `pragma` is scanned by its own detectors — `node scripts/scan.js
-hooks scripts cursor antigravity` — against its own ~2,100 lines. Currently: 10 findings, every one
+hooks scripts cursor antigravity copilot` — against its own ~2,400 lines. Currently: 12 findings, every one
 recorded with its specific reasoning in [.pragma/debt.md](.pragma/debt.md), rather than silently
 ignored or suppressed. That file is the actual, current output of the tool pointed at itself, not a
 curated example.
@@ -260,7 +327,8 @@ Requires Node 20.11 or newer. No dependencies to install.
 node --test tests/
 ```
 
-152 tests, including the Cursor and Antigravity adapters and both installers' merge logic. Scan any
+193 tests, including every host's adapters, both installers' merge logic, and the Copilot plugin's
+own manifest and hook commands. Scan any
 codebase directly with the same engine the hook uses:
 
 ```bash
