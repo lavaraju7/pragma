@@ -58,10 +58,11 @@ Deliberate departures from the principles, with the reasoning. Recorded via `/pr
 ## Linear scan inside a loop, on a tiny array
 
 - **Principle:** P10 Algorithm Speed
-- **Where:** `scripts/install-cursor.js:65`
-- **What:** `existing.hooks[event].some((e) => e.command === entry.command)` runs inside a loop over
-  the hook entries being merged in.
-- **Why deliberate:** `existing.hooks[event]` is a handful of hook command strings — realistically
+- **Where:** `scripts/lib/install-helpers.js:50` (`mergeHooksByCommand`, shared by the Cursor and
+  Windsurf installers — it was a copy in each until the second one appeared)
+- **What:** `existingHooks[event].some((existing) => existing.command === entry.command)` runs inside a
+  loop over the hook entries being merged in.
+- **Why deliberate:** `existingHooks[event]` is a handful of hook command strings — realistically
   under twenty even in a heavily customised `.cursor/hooks.json`. Indexing it into a `Map` first adds
   a second data structure to keep in sync with no measurable benefit at this size.
 - **Cost if wrong:** none in practice; the finding is correct in principle, just not proportionate

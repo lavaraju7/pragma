@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { resolveConfig } from '../hooks/lib/config.js';
-import { analyze } from '../hooks/lib/detectors/index.js';
+import { reportForFiles } from '../hooks/lib/file-report.js';
 import { emitJson, readHookInput, runHook } from '../hooks/lib/hook-io.js';
-import { formatFindings } from '../hooks/lib/report.js';
 import { hasExtension, isTestFile, JS_AND_PY } from '../hooks/lib/source.js';
 import { readSession, updateSession } from '../hooks/lib/state.js';
 import { pathsFromToolCall } from '../hooks/lib/tool-paths.js';
@@ -29,26 +27,9 @@ runHook(async () => {
   const config = resolveConfig(cwd);
   if (!config.enabled) return;
 
-  const reports = files
-    .map((file) => ({ file, source: readSafely(file) }))
-    .filter(({ source }) => source)
-    .map(({ file, source }) => formatFindings(
-      analyze(source, file, { tiers: config.tiers, disabled: config.disabledDetectors }),
-      file,
-      config.maxFindings,
-    ))
-    .filter(Boolean);
-
-  if (reports.length) emitJson({ additionalContext: reports.join('\n\n') });
+  const report = reportForFiles(files, config);
+  if (report) emitJson({ additionalContext: report });
 });
-
-function readSafely(filePath) {
-  try {
-    return readFileSync(filePath, 'utf8');
-  } catch {
-    return '';
-  }
-}
 
 function recordForStopCheck(sessionId, filePath) {
   const key = isTestFile(filePath) ? 'touchedTest' : 'wroteSource';

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { pluginRoot } from '../hooks/lib/paths.js';
+import { describeUnderTarget, installTemplates, mergeHooksByCommand, substitutePaths } from './lib/install-helpers.js';
 
 const SUPPORTED_HOOKS_VERSION = 1;
 const CURSOR_DIR_NAME = '.cursor';
@@ -48,40 +49,26 @@ function installRule() {
   ].join('\n');
 
   writeFileSync(file, content, 'utf8');
-  report.push(`rule:     ${describeUnderTarget(file)}`);
+  report.push(`rule:     ${describeUnderTarget(file, target)}`);
 }
 
 function installHooks() {
   const file = join(cursorDir, HOOKS_FILE_NAME);
   const template = JSON.parse(readFileSync(join(templateDir, HOOKS_FILE_NAME), 'utf8'));
-  const substituted = substitutePaths(template);
+  const substituted = substitutePaths(template, root);
 
   const existing = readExistingHooks(file);
   if (existing === null) return; // unsupported version — readExistingHooks already reported why
 
-  for (const [event, entries] of Object.entries(substituted.hooks)) {
-    existing.hooks[event] ??= [];
-    for (const entry of entries) {
-      const alreadyPresent = existing.hooks[event].some((e) => e.command === entry.command);
-      if (!alreadyPresent) existing.hooks[event].push(entry);
-    }
-  }
+  mergeHooksByCommand(existing.hooks, substituted.hooks);
 
   mkdirSync(cursorDir, { recursive: true });
   writeFileSync(file, `${JSON.stringify(existing, null, 2)}\n`, 'utf8');
-  report.push(`hooks:    ${describeUnderTarget(file)} (sessionStart, afterFileEdit, postToolUse, stop)`);
+  report.push(`hooks:    ${describeUnderTarget(file, target)} (sessionStart, afterFileEdit, postToolUse, stop)`);
 }
 
 function installCommands() {
-  const targetDir = join(cursorDir, 'commands');
-  mkdirSync(targetDir, { recursive: true });
-
-  const commandNames = readdirSync(commandsSourceDir).map((name) => {
-    const content = substitutePaths(readFileSync(join(commandsSourceDir, name), 'utf8'));
-    writeFileSync(join(targetDir, name), content, 'utf8');
-    return `/${basename(name, '.md')}`;
-  });
-
+  const commandNames = installTemplates(commandsSourceDir, join(cursorDir, 'commands'), root);
   report.push(`commands: ${commandNames.join(', ')}`);
 }
 
@@ -96,22 +83,11 @@ function readExistingHooks(file) {
 
   const parsed = JSON.parse(readFileSync(file, 'utf8'));
   if ((parsed.version ?? SUPPORTED_HOOKS_VERSION) !== SUPPORTED_HOOKS_VERSION) {
-    report.push(`hooks:    left ${describeUnderTarget(file)} untouched — version ${parsed.version} is`
+    report.push(`hooks:    left ${describeUnderTarget(file, target)} untouched — version ${parsed.version} is`
       + ` newer than this installer supports (${SUPPORTED_HOOKS_VERSION}). Add pragma's hooks`
       + ` from ${join(root, 'cursor', HOOKS_FILE_NAME)} by hand.`);
     return null;
   }
   parsed.hooks ??= {};
   return parsed;
-}
-
-function substitutePaths(value) {
-  const source = typeof value === 'string' ? value : JSON.stringify(value);
-  const replaced = source.replaceAll('{{PRAGMA_ROOT}}', root.replaceAll('\\', '/'));
-  return typeof value === 'string' ? replaced : JSON.parse(replaced);
-}
-
-/** `file` is always an absolute path already built under `target` by this script. */
-function describeUnderTarget(file) {
-  return file.slice(target.length + 1).replaceAll('\\', '/');
 }

@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "post_write_code": [
+      {
+        "command": "node \"{{PRAGMA_ROOT}}/windsurf/post-write-code.js\"",
+        "powershell": "node \"{{PRAGMA_ROOT}}/windsurf/post-write-code.js\"",
+        "show_output": true
+      }
+    ]
+  }
+}

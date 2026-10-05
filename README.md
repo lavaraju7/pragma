@@ -2,8 +2,8 @@
 
 Keeps the Pragmatic Programmer's principles in play while an AI coding agent writes code — not as a
 lecture at the start of a session, but at the moments they actually apply. Ships as an installable
-Claude Code plugin and a GitHub Copilot CLI plugin, and as a small per-project installer for Cursor
-and Antigravity.
+Claude Code plugin and a GitHub Copilot CLI plugin, and as a small per-project installer for Cursor,
+Antigravity and Windsurf.
 
 The question it optimises for is not "does this work?" but **"what will it cost to change this?"**
 
@@ -31,7 +31,7 @@ It never blocks a tool call. The detectors are regex-grade, and a false positive
 work is worse than one you can ignore.
 
 **On demand** — eight skills for the work detectors cannot do (the same eight, as Cursor commands,
-Antigravity workflows or Copilot skills, if that's the editor — see below).
+Antigravity or Windsurf workflows, or Copilot skills, if that's the editor — see below).
 
 ## Commands
 
@@ -235,6 +235,53 @@ the adapters directly. Specifically:
 `.pragma/mode` is still the one file all of these share, so a project that uses Copilot alongside any
 other host gets one enforcement mode across all of them.
 
+## Also works in Windsurf
+
+Same shape as Cursor — Windsurf config is per-project, so a generator writes into the project:
+
+```bash
+node /path/to/pragma/scripts/install-windsurf.js [target-directory]
+```
+
+| Piece | What it is |
+|---|---|
+| `rules/pragma.md` | The ladder as an `always_on` rule — this is how it reaches the agent |
+| `workflows/pragma-*.md` | The same eight commands (`/pragma-review`, …), from the same shared source Cursor's installer reads |
+| `hooks.json` | A `post_write_code` entry that runs the detectors on every file Cascade writes |
+
+(Windsurf also reads `SKILL.md` skills. These ship as workflows to match Cursor and Antigravity, which
+have no such thing.)
+
+**Where it writes matters.** Windsurf now documents `.devin/` as its preferred config directory and
+reads `.windsurf/` only as a fallback when the `.devin/` equivalent is absent — so writing a new
+`.devin/hooks.json` next to a project's existing `.windsurf/hooks.json` would silently switch off
+every hook they already have. The installer writes each piece wherever that project's own files already
+live, and only when neither exists picks `.devin/` if the project has that directory and `.windsurf/`
+(which every Windsurf version reads) if not. Re-running is safe: its hook entry is merged by command,
+never duplicated, and everything else in the file is left as it was.
+
+**The hook is different in kind from every other host's, and that's the thing to know.** Windsurf's
+hooks cannot talk to the agent. Their stdout goes to *you*, in the Cascade panel (that's what
+`show_output` does) — it is never fed to the model — and post-hooks can't block. The only
+agent-visible channel Windsurf offers is a `pre_*` hook exiting 2, which blocks the action. This
+plugin never blocks, and changing that to get parity would trade away the property it's built around,
+so it doesn't. The result:
+
+- Findings after each write are shown to the **developer**, not Cascade. Cascade doesn't see them and
+  can't fix them in the next turn the way Claude Code and Copilot can.
+- What reaches Cascade is the always-on rule (the ladder) and whatever workflow you run.
+- There's no strict-mode "this needs a test" reminder and no prompt nudges — both need a way to speak
+  to the agent, and Windsurf's hooks don't have one. Mode, set from any host, still applies to what
+  the hook reports.
+
+**What wasn't verified.** None of this has run inside Windsurf itself — it's a desktop IDE, not
+something a no-credentials check can drive. It was built against Windsurf's published hooks, rules and
+workflows documentation (now served from `docs.devin.ai`, following the Devin Desktop rebrand) and
+tested by running the adapter directly, by running the installed hook command in real `sh` and
+PowerShell, and by exercising the installer's placement rules against `.devin/`/`.windsurf/`
+combinations. The documented 12,000-character limit on rule and workflow files is asserted in the
+tests.
+
 ## Does this actually help?
 
 Not a benchmark — this doesn't run a suite of tasks across models to produce a percentage, and a
@@ -287,11 +334,11 @@ export async function chargeUser(userId: string) {
 of a linter is staying silent on the legitimate case that merely *looks* like the violation. Every
 one of the 26 detectors is tested against both — a parameterised query next to the interpolated one
 it should stay quiet on, a URL that's hardcoded but legitimately lives in the config module, a
-ternary that contains a comparison without being one. 193 tests, [tests/](tests/), runnable with
+ternary that contains a comparison without being one. 210 tests, [tests/](tests/), runnable with
 `node --test`.
 
 **Dogfooding, not just claims.** `pragma` is scanned by its own detectors — `node scripts/scan.js
-hooks scripts cursor antigravity copilot` — against its own ~2,400 lines. Currently: 12 findings, every one
+hooks scripts cursor antigravity copilot windsurf` — against its own ~2,600 lines. Currently: 12 findings, every one
 recorded with its specific reasoning in [.pragma/debt.md](.pragma/debt.md), rather than silently
 ignored or suppressed. That file is the actual, current output of the tool pointed at itself, not a
 curated example.
@@ -327,8 +374,8 @@ Requires Node 20.11 or newer. No dependencies to install.
 node --test tests/
 ```
 
-193 tests, including every host's adapters, both installers' merge logic, and the Copilot plugin's
-own manifest and hook commands. Scan any
+210 tests, including every host's adapters, all three installers' merge and placement logic, and the
+Copilot plugin's own manifest and hook commands. Scan any
 codebase directly with the same engine the hook uses:
 
 ```bash

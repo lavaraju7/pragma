@@ -1,7 +1,7 @@
 {
   "name": "pragma",
-  "version": "0.4.0",
-  "description": "Keeps the Pragmatic Programmer's 15 principles in play while Claude writes code: a design ladder injected each session, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts. Cursor and Antigravity installers (scripts/install-cursor.js, scripts/install-antigravity.js) and a Copilot CLI plugin manifest (plugin.json) share the same detector engine.",
+  "version": "0.5.0",
+  "description": "Keeps the Pragmatic Programmer's 15 principles in play while Claude writes code: a design ladder injected each session, deterministic violation detection on every edit, and skills for design, review, debugging, refactoring and contracts. Cursor, Antigravity and Windsurf installers (scripts/install-*.js) and a Copilot CLI plugin manifest (plugin.json) share the same detector engine.",
   "author": {
     "name": "koruprolu lava raju",
     "email": "lavaraju1170183@gmail.com"

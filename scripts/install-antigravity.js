@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { pluginRoot } from '../hooks/lib/paths.js';
+import { describeUnderTarget, installTemplates, substitutePaths } from './lib/install-helpers.js';
 
 const AGENTS_DIR_NAME = '.agents';
 const HOOKS_FILE_NAME = 'hooks.json';
@@ -38,7 +39,7 @@ function installRule() {
   ].join('\n');
 
   writeFileSync(file, content, 'utf8');
-  report.push(`rule:      ${describeUnderTarget(file)}`);
+  report.push(`rule:      ${describeUnderTarget(file, target)}`);
 }
 
 /**
@@ -54,11 +55,11 @@ function installHooks() {
   const existing = readExistingHooks(file);
   if (existing === null) return; // unreadable — readExistingHooks already reported why
 
-  existing[HOOK_GROUP_NAME] = substitutePaths(template)[HOOK_GROUP_NAME];
+  existing[HOOK_GROUP_NAME] = substitutePaths(template, root)[HOOK_GROUP_NAME];
 
   mkdirSync(agentsDir, { recursive: true });
   writeFileSync(file, `${JSON.stringify(existing, null, 2)}\n`, 'utf8');
-  report.push(`hooks:     ${describeUnderTarget(file)} (PostToolUse, PreInvocation, Stop — unverified, see README)`);
+  report.push(`hooks:     ${describeUnderTarget(file, target)} (PostToolUse, PreInvocation, Stop — unverified, see README)`);
 }
 
 /**
@@ -73,32 +74,13 @@ function readExistingHooks(file) {
   try {
     return JSON.parse(readFileSync(file, 'utf8'));
   } catch (error) {
-    report.push(`hooks:     left ${describeUnderTarget(file)} untouched — it isn't valid JSON`
+    report.push(`hooks:     left ${describeUnderTarget(file, target)} untouched — it isn't valid JSON`
       + ` (${error.message}). Add pragma's hooks from ${join(templateDir, HOOKS_FILE_NAME)} by hand.`);
     return null;
   }
 }
 
 function installWorkflows() {
-  const targetDir = join(agentsDir, 'workflows');
-  mkdirSync(targetDir, { recursive: true });
-
-  const workflowNames = readdirSync(commandsSourceDir).map((name) => {
-    const content = substitutePaths(readFileSync(join(commandsSourceDir, name), 'utf8'));
-    writeFileSync(join(targetDir, name), content, 'utf8');
-    return `/${basename(name, '.md')}`;
-  });
-
+  const workflowNames = installTemplates(commandsSourceDir, join(agentsDir, 'workflows'), root);
   report.push(`workflows: ${workflowNames.join(', ')}`);
-}
-
-function substitutePaths(value) {
-  const text = typeof value === 'string' ? value : JSON.stringify(value);
-  const replaced = text.replaceAll('{{PRAGMA_ROOT}}', root.replaceAll('\\', '/'));
-  return typeof value === 'string' ? replaced : JSON.parse(replaced);
-}
-
-/** `file` is always an absolute path already built under `target` by this script. */
-function describeUnderTarget(file) {
-  return file.slice(target.length + 1).replaceAll('\\', '/');
 }
